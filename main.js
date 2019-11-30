@@ -9,14 +9,36 @@ const server = createServer(app)
 const su = require('./system-usage.js');
 const wss = new webSocket.Server({ server });
 const util = require('os-utils');
-app.use(express.static(path.join(__dirname, '/public')));
-app.get("/api/system", (req, res) => {
-    res.json(su.systemUsage())
-});
+const si = require('systeminformation');
 
-app.get('/api/cpu', (req, res) => {
-    util.cpuUsage((result) => {
-        res.json({ "CPU Usage: (%)": (result * 100).toFixed(2) })
+app.use(express.static(path.join(__dirname, '/public')));
+
+app.get("/api/system", (req, res) => {
+    si.currentLoad().then(result => {
+        SystemHealth.CPU = (result.currentload).toFixed(2);
+
+        si.osInfo().then(result => {
+            SystemHealth.ServerName = result.hostname;
+            SystemHealth.OS = result.distro;
+            si.mem().then(result => {
+                SystemHealth.TotalMemory = (result.total / (Math.pow(1024, 3))).toFixed(2);
+                SystemHealth.MemoryUsed = (result.used / (Math.pow(1024, 3))).toFixed(2);
+                SystemHealth.AvailableMemory = (result.free / (Math.pow(1024, 3))).toFixed(2);
+
+                si.networkInterfaces().then(result => {
+                    SystemHealth.ServerIP = result[0].ip4;
+                    si.networkStats().then(result => {
+                        //console.log(result)
+                        si.networkConnections(result => {
+                            //console.log(result)
+                            console.log(SystemHealth)
+                            res.send(SystemHealth)
+                        })
+                    })
+
+                })
+            })
+        })
     })
 });
 
@@ -31,15 +53,18 @@ wss.on('connection', (ws, req) => {
     else {
         setInterval(() => {
             findProcess('name', (req.url).slice(1), true).then((result) => {
-                if (result.length != 0) {
-                    pidusage(result[0].pid, (err, stats) => {
-                        if (err) {
-                            ws.send(err)
-                        }
-                        else {
-                            ws.send(JSON.stringify([stats]));
-                        }
-                    })
+                console.log(result)
+                if (result.length > 0) {
+                    result.forEach(element => {
+                        pidusage(element.pid, (err, stats) => {
+                            if (err) {
+                                ws.send(err)
+                            }
+                            else {
+                                ws.send(JSON.stringify([stats]));
+                            }
+                        })
+                    });
                 }
                 else {
                     console.log('no such process is running')
@@ -55,15 +80,62 @@ server.listen(3000, () => {
     console.log('running on port 3000')
 });
 
-//var exec = require('child_process').exec;
-// execute(){
-//     exec('cmd.exe ipconfig', function(error, stdout, stderr){ callback(stdout); });
-// };
-//string = typeperf  "\\Process(mongod)\\% processor time" "\\Process(mongod)\\Private Bytes" "Process(mongod)\\Working Set" -si 10
-// exec('typeperf  "\\Process(mongod)\\% Processor Time" "Process(mongod)\\Working Set" -sc 1', (err, stdout, stderr) => {
-//     if (err) {
-//       console.error(err);
-//       return;
-//     }
-//     console.log(stdout);
-//   });
+si.networkInterfaces().then(result => {
+    // console.log(result[0].ip4)
+    //console.log(result)
+})
+
+// setInterval(() => {
+//     si.currentLoad().then((result => {
+//         //console.log((result.currentload).toFixed(2) + ' %')
+//     })).then(() => {
+//         si.osInfo().then((result => {
+//             // console.log(result.distro)
+//             // console.log(result.hostname)
+//         }))
+//     }).then(() => {
+//         si.mem().then((result => {
+//             // console.log(result.total/(Math.pow(1024,3)))
+//             // console.log(result.used/(Math.pow(1024,3)))
+//             // console.log(result.free/(Math.pow(1024,3)))
+//         }))
+//     }).then(() => {
+//         si.networkInterfaces().then(result => {
+//             //console.log(result[0].ip4)
+//             //console.log(result[0].speed)
+//         })
+//     }).then(() => {
+//         si.networkStats().then(result => {
+//             //console.log(result)
+//         })
+//     }).then(() => {
+//         si.networkConnections(result => {
+//             //console.log(result)
+//         })
+//     })
+// }, 3000)
+
+let SystemHealth = {
+    ServerName: "",
+    ServerIP: "",
+    Status: "",
+    OS: "",
+    CPU: "",
+    TotalMemory: "",
+    MemoryUsed: "",
+    AvailableMemory: "",
+    TotalBandwidth: "",
+    UsedBandwidth: ""
+}
+
+setInterval(()=>{
+    si.networkStats().then(result=>{
+        console.log(result)
+        console.log('Received '+(result[0].rx_sec))
+        console.log('Sent ' +(result[0].tx_sec))
+    })
+},1500)
+
+si.inetLatency((result)=>{
+    console.log(result)
+})

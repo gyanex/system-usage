@@ -18,6 +18,7 @@
     "os-utils": "0.0.14",
     "pidusage": "^2.0.17",
     "ps-node": "^0.1.6",
+    "systeminformation": "^4.16.0",
     "ws": "^7.2.0"
   }
 }
