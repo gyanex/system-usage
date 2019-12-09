@@ -80,10 +80,10 @@ server.listen(3000, () => {
     console.log('running on port 3000')
 });
 
-si.networkInterfaces().then(result => {
-    // console.log(result[0].ip4)
-    //console.log(result)
-})
+// si.networkInterfaces().then(result => {
+//     // console.log(result[0].ip4)
+//     //console.log(result)
+// })
 
 // setInterval(() => {
 //     si.currentLoad().then((result => {
@@ -128,14 +128,54 @@ let SystemHealth = {
     UsedBandwidth: ""
 }
 
-setInterval(()=>{
-    si.networkStats().then(result=>{
-        console.log(result)
-        console.log('Received '+(result[0].rx_sec))
-        console.log('Sent ' +(result[0].tx_sec))
-    })
-},1500)
+let processHealth={
+    ServerName :"",
+    ServerIP:"",
+    OS:"",
+    ProcessId:"",
+    ProcessName:"",
+    UpTime:"",
+    Status:"",
+    CPU:"",
+    TotalMemory:"",
+    MemoryUsed:"",
+    AvailableMemory:"",
+    TotalBandwidth:"",
+    UsedBandwidth:""
+}
+// setInterval(()=>{
+//     si.networkStats().then(result=>{
+//         console.log(result)
+//         console.log('Received '+(result[0].rx_sec))
+//         console.log('Sent ' +(result[0].tx_sec)/1024)
+//     })
+// },1500)
 
-si.inetLatency((result)=>{
-    console.log(result)
+// si.inetLatency((result)=>{
+//     console.log(result)
+// })
+
+//si.getStaticData((result)=>{console.log(result)})
+app.get('/api/process/:processName', (req, res)=>{
+    findProcess('name', (req.params.processName), true).then((result)=>{
+        if(result.length>0){
+            let temp=[];
+            result.forEach(element => {
+                pidusage(element.pid, (err, stats) => {
+                    if (err) {
+                        res.send(err)
+                    }
+                    else {
+                        console.log(stats)
+                        res.send(JSON.stringify([stats]));
+                    }
+                })
+            });
+            
+        }
+        
+        else{
+            res.send('no such process is running')
+        }
+    })
 })
