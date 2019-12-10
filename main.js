@@ -128,21 +128,21 @@ let SystemHealth = {
     UsedBandwidth: ""
 }
 
-let processHealth={
-    ServerName :"",
-    ServerIP:"",
-    OS:"",
-    ProcessId:"",
-    ProcessName:"",
-    UpTime:"",
-    Status:"",
-    CPU:"",
-    TotalMemory:"",
-    MemoryUsed:"",
-    AvailableMemory:"",
-    TotalBandwidth:"",
-    UsedBandwidth:""
-}
+let processHealth = [{
+    ServerName: "",
+    ServerIP: "",
+    OS: "",
+    ProcessId: "",
+    ProcessName: "",
+    UpTime: "",
+    Status: "",
+    CPU: "",
+    TotalMemory: "",
+    MemoryUsed: "",
+    AvailableMemory: "",
+    TotalBandwidth: "",
+    UsedBandwidth: ""
+}]
 // setInterval(()=>{
 //     si.networkStats().then(result=>{
 //         console.log(result)
@@ -156,25 +156,38 @@ let processHealth={
 // })
 
 //si.getStaticData((result)=>{console.log(result)})
-app.get('/api/process/:processName', (req, res)=>{
-    findProcess('name', (req.params.processName), true).then((result)=>{
-        if(result.length>0){
-            let temp=[];
-            result.forEach(element => {
+app.get('/api/process/:processName', (req, res) => {
+    findProcess('name', (req.params.processName), true).then((result) => {
+        if (result.length > 0) {
+            let temp = [];
+            result.forEach((element) => {
+                i = 0;
                 pidusage(element.pid, (err, stats) => {
+                    //processHealth.length=0;
                     if (err) {
-                        res.send(err)
+                        res.send(err);
+                        i++
                     }
                     else {
-                        console.log(stats)
-                        res.send(JSON.stringify([stats]));
+                        temp.push(
+                            [processHealth.CPU = stats.cpu,
+                            processHealth.MemoryUsed = stats.memory / (1024 * 1024),
+                            processHealth.UpTime = stats.elapsed / (1000 * 60),
+                            processHealth.ProcessName = req.params.processName,
+                            processHealth.ProcessId = stats.pid]
+                        );
+                        i++;
+                        if (i === result.length) {
+                            res.send(temp)
+                        }
                     }
                 })
+
             });
-            
+
         }
-        
-        else{
+
+        else {
             res.send('no such process is running')
         }
     })
